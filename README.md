@@ -1,5 +1,5 @@
 
-# Ninox Sign-Up QA Strategy & Implementation
+# Ninox Sign-Up QA Task
 
 ## Strategic Overview
 
