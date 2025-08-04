@@ -21,7 +21,7 @@ public abstract class BaseTest {
     protected WebDriver driver;
     protected String baseUrl;
     
-    @BeforeClass
+    @BeforeClass(alwaysRun = true)
     @Step("Initialize test configuration")
     public void setUpClass() {
         ConfigManager.printConfiguration();
@@ -29,7 +29,7 @@ public abstract class BaseTest {
         logger.info("Test suite initialized for base URL: {}", baseUrl);
     }
     
-    @BeforeMethod
+    @BeforeMethod(alwaysRun = true)
     @Step("Initialize WebDriver")
     public void setUp() {
         String browser = ConfigManager.getBrowser();
@@ -48,7 +48,7 @@ public abstract class BaseTest {
         setupTest();
     }
     
-    @AfterMethod
+    @AfterMethod(alwaysRun = true)
     @Step("Clean up WebDriver and capture artifacts on failure")
     public void tearDown(ITestResult result) {
         if (!result.isSuccess()) {
@@ -69,7 +69,7 @@ public abstract class BaseTest {
         logger.info("Test completed: {}", result.getMethod().getMethodName());
     }
     
-    @AfterClass
+    @AfterClass(alwaysRun = true)
     @Step("Close browser session after test class")
     public void tearDownClass() {
         // Always quit driver after all tests in class are complete
