@@ -92,6 +92,15 @@ public class ConfigManager {
         }
     }
     
+    // Test email configuration for real account creation
+    public static String getTestEmailDomain() {
+        return System.getProperty("test.email.domain", "murat-kus.com");
+    }
+    
+    public static String getTestEmailPrefix() {
+        return System.getProperty("test.email.prefix", "me");
+    }
+    
     // Debug method to print all configuration
     public static void printConfiguration() {
         logger.info("=== Test Configuration ===");
@@ -104,6 +113,8 @@ public class ConfigManager {
         logger.info("Thread Count: {}", getThreadCount());
         logger.info("Retry Enabled: {}", isRetryEnabled());
         logger.info("Max Retries: {}", getMaxRetries());
+        logger.info("Test Email Domain: {}", getTestEmailDomain());
+        logger.info("Test Email Prefix: {}", getTestEmailPrefix());
         logger.info("========================");
     }
 }

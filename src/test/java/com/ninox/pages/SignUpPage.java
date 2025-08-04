@@ -17,55 +17,63 @@ public class SignUpPage {
     private final WebDriver driver;
     private final WebDriverWait wait;
     
-    // Flexible locators - multiple strategies for robustness
+    // Primary locators with essential fallbacks
     private final By[] emailFieldSelectors = {
         By.id("email"),
-        By.name("email"),
-        By.xpath("//input[@type='email']"),
-        By.xpath("//input[contains(@placeholder, 'email') or contains(@placeholder, 'Email')]")
+        By.xpath("//input[@type='email']")
     };
     
     private final By[] passwordFieldSelectors = {
         By.id("password"),
-        By.name("password"),
-        By.xpath("//input[@type='password']"),
-        By.xpath("//input[contains(@placeholder, 'password') or contains(@placeholder, 'Password')]")
+        By.xpath("//input[@type='password']")
     };
     
     private final By[] marketingCheckboxSelectors = {
-        By.id("marketing-consent"),
-        By.name("marketing"),
         By.id("idxufwc"),
-        By.xpath("//input[@type='checkbox' and @name='marketing']"),
-        By.xpath("//input[@type='checkbox']"),
-        By.xpath("//*[contains(text(), 'marketing') or contains(text(), 'newsletter')]/..//input[@type='checkbox']")
+        By.xpath("//input[@type='checkbox']")
     };
     
     private final By[] createAccountButtonSelectors = {
+        By.xpath("//button[@data-testid='create-account']"),
+        By.xpath("//button[.//span[contains(text(), 'Create account')]]"),
         By.xpath("//button[contains(text(), 'Create Account')]"),
-        By.xpath("//button[contains(text(), 'Sign up')]"),
-        By.xpath("//button[contains(text(), 'Register')]"),
-        By.xpath("//button[@type='submit']"),
-        By.xpath("//input[@type='submit']")
+        By.xpath("//button[@type='submit']")
     };
     
     private final By[] continueWithGoogleButtonSelectors = {
-        By.xpath("//button[contains(text(), 'Continue with Google')]"),
-        By.xpath("//button[contains(text(), 'Sign up with Google')]"),
-        By.xpath("//button[contains(text(), 'Google')]"),
-        By.xpath("//*[contains(@class, 'google') or contains(@class, 'oauth')]//button"),
-        By.xpath("//button[contains(@aria-label, 'Google')]"),
-        By.xpath("//button[contains(@class, 'Container-jFjATm')]"),
         By.xpath("//button[.//span[contains(text(), 'Continue with Google')]]"),
-        By.xpath("//span[contains(text(), 'Continue with Google')]/parent::button")
+        By.xpath("//button[contains(text(), 'Continue with Google')]")
     };
     
     private final By[] errorMessageSelectors = {
-        By.xpath("//*[contains(@class, 'error') and contains(text(), '.')]"),
-        By.xpath("//*[contains(@class, 'invalid') and contains(text(), '.')]"),
-        By.xpath("//*[contains(@class, 'warning') and contains(text(), '.')]"),
         By.xpath("//*[@role='alert']"),
-        By.xpath("//*[contains(@class, 'message') and contains(text(), '.')]")
+        By.xpath("//*[contains(@class, 'error') and contains(text(), '.')]")
+    };
+    
+    // User type selection locators
+    private final By[] personalSignupSelectors = {
+        By.xpath("//button[contains(text(), 'Personal') or contains(text(), 'personal')]"),
+        By.xpath("//*[contains(@data-testid, 'personal') or contains(@id, 'personal')]"),
+        By.xpath("//button[contains(@class, 'personal')]"),
+        By.xpath("//*[contains(text(), 'For personal use')]"),
+        By.xpath("//*[contains(text(), 'Individual')]")  
+    };
+    
+    private final By[] teamWorkSignupSelectors = {
+        By.xpath("//button[contains(text(), 'Team') or contains(text(), 'team')]"),
+        By.xpath("//button[contains(text(), 'Work') or contains(text(), 'work')]"),
+        By.xpath("//button[contains(text(), 'Business') or contains(text(), 'business')]"),
+        By.xpath("//*[contains(@data-testid, 'team') or contains(@id, 'team')]"),
+        By.xpath("//*[contains(text(), 'For work')]"),
+        By.xpath("//*[contains(text(), 'Organization')]")  
+    };
+    
+    private final By[] bookDemoSelectors = {
+        By.xpath("//button[contains(text(), 'Book a demo') or contains(text(), 'Book demo')]"),
+        By.xpath("//a[contains(text(), 'Book a demo') or contains(text(), 'Book demo')]"),
+        By.xpath("//*[contains(@href, 'demo') or contains(@data-testid, 'demo')]"),
+        By.xpath("//*[contains(text(), 'Schedule demo')]"),
+        By.xpath("//*[contains(text(), 'Request demo')]")
     };
     
     // Cookie/Privacy panel locators - Specific for Ninox's Cookiebot implementation
@@ -98,7 +106,7 @@ public class SignUpPage {
     private boolean elementExistsWithFallback(By[] selectors, String elementName) {
         for (By selector : selectors) {
             try {
-                if (driver.findElements(selector).size() > 0) {
+                if (!driver.findElements(selector).isEmpty()) {
                     logger.debug("Found {} using selector: {}", elementName, selector);
                     return true;
                 }
@@ -131,30 +139,145 @@ public class SignUpPage {
     
     private void handleCookiePanel() {
         try {
-            // Wait briefly for cookie panel to appear
-            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(3));
+            // Wait longer for cookie panel to appear (it might load after page)
+            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(8));
             
-            if (driver.findElements(cookiePanel).size() > 0) {
-                logger.info("Cookie/privacy panel detected, attempting to dismiss");
-                
-                // Try different dismiss strategies in order of preference
-                if (tryClickButton(cookieAcceptButton, "Accept cookies (Cookiebot)")) return;
-                if (tryClickButton(cookieAcceptButtonAlt, "Accept cookies (generic)")) return;
-                if (tryClickButton(cookieRejectButton, "Reject cookies")) return;
-                if (tryClickButton(cookieCloseButton, "Close cookie panel")) return;
-                
-                logger.warn("Could not dismiss cookie panel with standard methods");
+            // Check multiple times as panel might appear with delay
+            for (int attempt = 0; attempt < 3; attempt++) {
+                if (!driver.findElements(cookiePanel).isEmpty()) {
+                    logger.info("Cookie/privacy panel detected (attempt {}), attempting to dismiss", attempt + 1);
+                    
+                    // Try different dismiss strategies in order of preference
+                    if (tryClickButton(cookieAcceptButton, "Accept cookies (Cookiebot)")) {
+                        waitForCookiePanelToDisappear();
+                        return;
+                    }
+                    if (tryClickButton(cookieAcceptButtonAlt, "Accept cookies (generic)")) {
+                        waitForCookiePanelToDisappear();
+                        return;
+                    }
+                    if (tryClickButton(cookieRejectButton, "Reject cookies")) {
+                        waitForCookiePanelToDisappear();
+                        return;
+                    }
+                    if (tryClickButton(cookieCloseButton, "Close cookie panel")) {
+                        waitForCookiePanelToDisappear();
+                        return;
+                    }
+                } else {
+                    // Wait for panel to potentially appear with explicit wait
+                    WebDriverWait veryShortWait = new WebDriverWait(driver, Duration.ofSeconds(1));
+                    try {
+                        veryShortWait.until(ExpectedConditions.presenceOfElementLocated(cookiePanel));
+                    } catch (Exception ignored) {
+                        // Panel didn't appear, continue
+                    }
+                }
+            }
+            
+            // Final check if panel is still there
+            if (!driver.findElements(cookiePanel).isEmpty()) {
+                logger.warn("Cookie panel still present, trying last resort methods");
                 
                 // Last resort: try pressing Escape key
                 try {
                     driver.findElement(By.tagName("body")).sendKeys(Keys.ESCAPE);
-                    logger.info("Attempted to dismiss cookie panel with Escape key");
+                    WebDriverWait veryShortWait = new WebDriverWait(driver, Duration.ofSeconds(1));
+                    veryShortWait.until(ExpectedConditions.invisibilityOfElementLocated(cookiePanel));
+                    logger.info("Successfully dismissed cookie panel with Escape key");
                 } catch (Exception e) {
                     logger.warn("Escape key method failed: {}", e.getMessage());
                 }
+                
+                // Try clicking outside the panel
+                try {
+                    driver.findElement(By.tagName("body")).click();
+                    WebDriverWait veryShortWait = new WebDriverWait(driver, Duration.ofSeconds(1));
+                    veryShortWait.until(ExpectedConditions.invisibilityOfElementLocated(cookiePanel));
+                    logger.info("Successfully dismissed cookie panel by clicking body");
+                } catch (Exception e) {
+                    logger.warn("Body click method failed: {}", e.getMessage());
+                }
             }
+            
         } catch (Exception e) {
-            logger.debug("No cookie panel found or error handling it: {}", e.getMessage());
+            logger.debug("Error handling cookie panel: {}", e.getMessage());
+        }
+    }
+    
+    private void dismissPasswordVerificationPane() {
+        try {
+            // Look for password verification overlay/pane that might block the button
+            By[] passwordPaneSelectors = {
+                By.xpath("//*[contains(@class, 'password') and contains(@class, 'verification')]"),
+                By.xpath("//*[contains(@class, 'password') and contains(@class, 'strength')]"),
+                By.xpath("//*[contains(@class, 'overlay') or contains(@class, 'modal')]"),
+                By.xpath("//*[@role='dialog' or @role='tooltip']"),
+                By.xpath("//*[contains(@class, 'popover') or contains(@class, 'dropdown')]"),
+                By.xpath("//*[contains(@class, 'tooltip') or contains(@class, 'hint')]"),
+                By.xpath("//*[contains(@style, 'z-index') and contains(@style, 'position')]")
+            };
+            
+            for (By selector : passwordPaneSelectors) {
+                List<WebElement> panes = driver.findElements(selector);
+                for (WebElement pane : panes) {
+                    if (pane.isDisplayed()) {
+                        logger.info("Found password verification pane, attempting to dismiss");
+                        
+                        // Try clicking on a safe empty area to dismiss
+                        try {
+                            // Click on page margin area (top-left corner, away from any elements)
+                            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript(
+                                "document.elementFromPoint(50, 50).click();"
+                            );
+                            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(1));
+                            shortWait.until(ExpectedConditions.invisibilityOf(pane));
+                            logger.info("Password verification pane dismissed by clicking safe area");
+                            return;
+                        } catch (Exception e) {
+                            logger.debug("Could not dismiss pane by clicking safe area: {}", e.getMessage());
+                        }
+                        
+                        // Try clicking on empty space near the form
+                        try {
+                            // Click at coordinates outside the form but within viewport
+                            ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("document.elementFromPoint(100, 100).click();");
+                            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(1));
+                            shortWait.until(ExpectedConditions.invisibilityOf(pane));
+                            logger.info("Password verification pane dismissed by clicking elsewhere");
+                            return;
+                        } catch (Exception e) {
+                            logger.debug("Could not dismiss pane by clicking elsewhere: {}", e.getMessage());
+                        }
+                        
+                        // Try pressing Escape
+                        try {
+                            driver.findElement(By.tagName("body")).sendKeys(Keys.ESCAPE);
+                            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(1));
+                            shortWait.until(ExpectedConditions.invisibilityOf(pane));
+                            logger.info("Password verification pane dismissed with Escape");
+                            return;
+                        } catch (Exception e) {
+                            logger.debug("Could not dismiss pane with Escape: {}", e.getMessage());
+                        }
+                    }
+                }
+            }
+            
+            logger.debug("No password verification pane found or already dismissed");
+            
+        } catch (Exception e) {
+            logger.debug("Error handling password verification pane: {}", e.getMessage());
+        }
+    }
+    
+    private void waitForCookiePanelToDisappear() {
+        try {
+            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(5));
+            shortWait.until(ExpectedConditions.invisibilityOfElementLocated(cookiePanel));
+            logger.info("Cookie panel successfully dismissed");
+        } catch (Exception e) {
+            logger.debug("Cookie panel might still be visible: {}", e.getMessage());
         }
     }
     
@@ -212,9 +335,126 @@ public class SignUpPage {
     
     public void clickCreateAccount() {
         logger.info("Clicking Create Account button");
+        
+        // First, dismiss any password verification pane that might be blocking the button
+        dismissPasswordVerificationPane();
+        
         WebElement button = findElementWithFallback(createAccountButtonSelectors, "create account button");
+        
+        // Log button state before clicking
+        logger.info("Button enabled: {}, displayed: {}, text: '{}'", 
+                   button.isEnabled(), button.isDisplayed(), button.getText());
+        
+        // Scroll to button to ensure it's visible
+        ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", button);
+        
+        // Wait for button to be clickable after scroll
         wait.until(ExpectedConditions.elementToBeClickable(button));
-        button.click();
+        
+        // Log current URL before clicking
+        String urlBeforeClick = driver.getCurrentUrl();
+        logger.info("URL before button click: {}", urlBeforeClick);
+        
+        // Try multiple click strategies
+        boolean clicked = false;
+        
+        // Strategy 1: Regular click
+        try {
+            button.click();
+            clicked = true;
+            logger.info("Create Account button clicked (regular click)");
+        } catch (Exception e) {
+            logger.debug("Regular click failed: {}", e.getMessage());
+        }
+        
+        // Strategy 2: JavaScript click if regular click failed
+        if (!clicked) {
+            try {
+                ((org.openqa.selenium.JavascriptExecutor) driver).executeScript("arguments[0].click();", button);
+                clicked = true;
+                logger.info("Create Account button clicked (JavaScript click)");
+            } catch (Exception e) {
+                logger.debug("JavaScript click failed: {}", e.getMessage());
+            }
+        }
+        
+        // Strategy 3: Actions click if others failed
+        if (!clicked) {
+            try {
+                new org.openqa.selenium.interactions.Actions(driver)
+                    .moveToElement(button)
+                    .click()
+                    .perform();
+                logger.info("Create Account button clicked (Actions click)");
+            } catch (Exception e) {
+                logger.error("All click strategies failed: {}", e.getMessage());
+                throw new RuntimeException("Could not click Create Account button", e);
+            }
+        }
+        
+        // Wait a moment and check if URL changed or if we're still on the same page
+        try {
+            Thread.sleep(3000); // Give time for any submission to process
+            String urlAfterClick = driver.getCurrentUrl();
+            logger.info("URL after button click: {}", urlAfterClick);
+            
+            if (urlBeforeClick.equals(urlAfterClick)) {
+                logger.warn("⚠️ URL unchanged after button click - investigating form state");
+                
+                // Check for validation errors with more thorough search
+                String emailError = getEmailErrorMessage();
+                String passwordError = getPasswordErrorMessage();
+                String generalError = getGeneralErrorMessage();
+                
+                // Check console for JavaScript errors
+                try {
+                    List<org.openqa.selenium.logging.LogEntry> logs = driver.manage().logs().get("browser").getAll();
+                    for (org.openqa.selenium.logging.LogEntry log : logs) {
+                        if (log.getLevel().toString().equals("SEVERE")) {
+                            logger.warn("Browser console error: {}", log.getMessage());
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.debug("Could not retrieve console logs: {}", e.getMessage());
+                }
+                
+                // Check if form fields are still filled (to see if form was reset)
+                try {
+                    WebElement emailField = findElementWithFallback(emailFieldSelectors, "email field");
+                    WebElement passwordField = findElementWithFallback(passwordFieldSelectors, "password field");
+                    
+                    String currentEmailValue = emailField.getAttribute("value");
+                    String currentPasswordValue = passwordField.getAttribute("value");
+                    
+                    logger.info("Email field value after click: '{}'", currentEmailValue);
+                    logger.info("Password field value after click: '{}'", currentPasswordValue.isEmpty() ? "empty" : "filled");
+                    
+                    if (currentEmailValue.isEmpty() && currentPasswordValue.isEmpty()) {
+                        logger.info("Form fields were cleared - may indicate submission attempt");
+                    }
+                } catch (Exception e) {
+                    logger.debug("Could not check form field values: {}", e.getMessage());
+                }
+                
+                // Log any found errors
+                if (!emailError.isEmpty()) logger.warn("Email error: {}", emailError);
+                if (!passwordError.isEmpty()) logger.warn("Password error: {}", passwordError);
+                if (!generalError.isEmpty()) logger.warn("General error: {}", generalError);
+                
+                // Check if button became disabled (indicating processing)
+                try {
+                    WebElement buttonAfterClick = findElementWithFallback(createAccountButtonSelectors, "create account button");
+                    logger.info("Button enabled after click: {}", buttonAfterClick.isEnabled());
+                } catch (Exception e) {
+                    logger.debug("Could not check button state after click: {}", e.getMessage());
+                }
+                
+            } else {
+                logger.info("✅ URL changed - form submission detected");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
     
     public boolean isGoogleButtonPresent() {
@@ -306,8 +546,8 @@ public class SignUpPage {
     public boolean isCreateAccountButtonEnabled() {
         try {
             WebElement button = findElementWithFallback(createAccountButtonSelectors, "create account button");
-            boolean enabled = button.isEnabled();
-            logger.info("Create Account button enabled: {}", enabled);
+            boolean enabled = button.isEnabled() && button.isDisplayed();
+            logger.info("Create Account button enabled and visible: {}", enabled);
             return enabled;
         } catch (Exception e) {
             logger.warn("Create Account button not found: {}", e.getMessage());
@@ -345,6 +585,97 @@ public class SignUpPage {
             return passwordElement.isDisplayed();
         } catch (Exception e) {
             logger.warn("Password field not visible: {}", e.getMessage());
+            return false;
+        }
+    }
+    
+    // User type selection methods
+    public void selectPersonalSignup() {
+        logger.info("Selecting Personal signup option");
+        try {
+            WebElement personalButton = findElementWithFallback(personalSignupSelectors, "personal signup button");
+            wait.until(ExpectedConditions.elementToBeClickable(personalButton));
+            personalButton.click();
+            logger.info("Personal signup selected");
+        } catch (Exception e) {
+            logger.warn("Personal signup option not found: {}", e.getMessage());
+        }
+    }
+    
+    public void selectTeamWorkSignup() {
+        logger.info("Selecting Team/Work signup option");
+        try {
+            WebElement teamButton = findElementWithFallback(teamWorkSignupSelectors, "team/work signup button");
+            wait.until(ExpectedConditions.elementToBeClickable(teamButton));
+            teamButton.click();
+            logger.info("Team/Work signup selected");
+        } catch (Exception e) {
+            logger.warn("Team/Work signup option not found: {}", e.getMessage());
+        }
+    }
+    
+    public boolean isPersonalSignupOptionAvailable() {
+        return elementExistsWithFallback(personalSignupSelectors, "personal signup option");
+    }
+    
+    public boolean isTeamWorkSignupOptionAvailable() {
+        return elementExistsWithFallback(teamWorkSignupSelectors, "team/work signup option");
+    }
+    
+    public void clickBookDemo() {
+        logger.info("Clicking Book Demo button");
+        try {
+            WebElement demoButton = findElementWithFallback(bookDemoSelectors, "book demo button");
+            wait.until(ExpectedConditions.elementToBeClickable(demoButton));
+            demoButton.click();
+            logger.info("Book Demo button clicked");
+        } catch (Exception e) {
+            logger.warn("Book Demo button not found: {}", e.getMessage());
+            throw new RuntimeException("Could not find Book Demo button", e);
+        }
+    }
+    
+    public boolean isBookDemoAvailable() {
+        return elementExistsWithFallback(bookDemoSelectors, "book demo button");
+    }
+    
+    public boolean isDemoPageLoaded() {
+        try {
+            // Wait for URL to contain demo-related keywords or specific demo page elements
+            WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(5));
+            
+            // Check URL for demo indicators
+            String currentUrl = driver.getCurrentUrl().toLowerCase();
+            if (currentUrl.contains("demo") || currentUrl.contains("schedule") || currentUrl.contains("meeting")) {
+                logger.info("Demo page loaded - URL contains demo keywords: {}", currentUrl);
+                return true;
+            }
+            
+            // Check for demo page elements
+            By[] demoPageSelectors = {
+                By.xpath("//*[contains(text(), 'Schedule') and contains(text(), 'demo')]"),
+                By.xpath("//*[contains(text(), 'Book') and contains(text(), 'meeting')]"),
+                By.xpath("//*[contains(@class, 'calendar') or contains(@class, 'scheduler')]"),
+                By.xpath("//*[contains(text(), 'Choose a time')]"),
+                By.xpath("//*[contains(text(), 'Select date')]"),
+                By.xpath("//*[contains(@class, 'calendly') or contains(@class, 'hubspot')]") // Common demo booking tools
+            };
+            
+            for (By selector : demoPageSelectors) {
+                try {
+                    shortWait.until(ExpectedConditions.presenceOfElementLocated(selector));
+                    logger.info("Demo page loaded - found demo element");
+                    return true;
+                } catch (Exception ignored) {
+                    // Continue checking other selectors
+                }
+            }
+            
+            logger.warn("Demo page not detected");
+            return false;
+            
+        } catch (Exception e) {
+            logger.warn("Error checking if demo page loaded: {}", e.getMessage());
             return false;
         }
     }
