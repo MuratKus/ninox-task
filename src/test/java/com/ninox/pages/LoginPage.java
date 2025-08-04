@@ -63,12 +63,13 @@ public class LoginPage extends BasePage {
     public void waitForPageToLoad() {
         logger.info("Waiting for login page to load...");
         
-        // Cookie panel is already handled by BasePage.navigateToSignInViaHomepage()
-        
         try {
-            // Wait for key form elements to be present
-            findElementWithFallback(emailFieldSelectors, "email field");
-            findElementWithFallback(passwordFieldSelectors, "password field");
+            // Simple, fast check - wait for page title to contain "Sign in" or URL to contain "sign-in"
+            wait.until(driver -> 
+                driver.getTitle().toLowerCase().contains("sign") || 
+                driver.getCurrentUrl().contains("sign-in") ||
+                !driver.findElements(By.xpath("//input[@type='email' or @name='email']")).isEmpty()
+            );
             logger.info("Login page loaded successfully");
         } catch (Exception e) {
             logger.error("Login page failed to load: {}", e.getMessage());
@@ -78,24 +79,25 @@ public class LoginPage extends BasePage {
     
     public void enterEmail(String email) {
         logger.info("Entering email: {}", email);
-        WebElement emailElement = findElementWithFallback(emailFieldSelectors, "email field");
-        wait.until(ExpectedConditions.elementToBeClickable(emailElement));
+        WebElement emailElement = wait.until(ExpectedConditions.elementToBeClickable(
+            By.xpath("//input[@type='email' or @name='email' or @id='email']")));
         emailElement.clear();
         emailElement.sendKeys(email);
     }
     
     public void enterPassword(String password) {
         logger.info("Entering password");
-        WebElement passwordElement = findElementWithFallback(passwordFieldSelectors, "password field");
-        wait.until(ExpectedConditions.elementToBeClickable(passwordElement));
+        WebElement passwordElement = wait.until(ExpectedConditions.elementToBeClickable(
+            By.xpath("//input[@type='password' or @name='password' or @id='password']")));
         passwordElement.clear();
         passwordElement.sendKeys(password);
     }
     
     public void clickLogin() {
         logger.info("Clicking Login button");
-        WebElement button = findElementWithFallback(loginButtonSelectors, "login button");
-        clickElementWithStrategies(button, "Login button");
+        WebElement button = wait.until(ExpectedConditions.elementToBeClickable(
+            By.xpath("//button[@data-testid='login' or .//span[contains(text(), 'Log in')]]")));
+        button.click();
     }
     
     public boolean isLoginSuccessful() {

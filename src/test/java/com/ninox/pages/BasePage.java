@@ -48,9 +48,12 @@ public abstract class BasePage {
      * This is the core pattern used across all page objects to handle dynamic selectors
      */
     protected WebElement findElementWithFallback(By[] selectors, String elementName) {
+        // Use shorter wait for each selector to avoid long timeouts when trying multiple selectors
+        WebDriverWait shortWait = new WebDriverWait(driver, Duration.ofSeconds(3));
+        
         for (By selector : selectors) {
             try {
-                WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(selector));
+                WebElement element = shortWait.until(ExpectedConditions.presenceOfElementLocated(selector));
                 logger.debug("Found {} using selector: {}", elementName, selector);
                 return element;
             } catch (Exception e) {
