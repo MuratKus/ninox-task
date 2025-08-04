@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Ninox Sign-up Tests" verbose="1">
+    
+    <!-- Core Sign-up Tests - Ordered execution -->
+    <test name="Core Sign-up Flow Tests" preserve-order="true">
+        <classes>
+            <class name="com.ninox.tests.SignUpTests">
+                <methods>
+                    <!-- Smoke test first -->
+                    <include name="testPageAccessibility"/>
+                    
+                    <!-- Critical path tests -->
+                    <include name="testValidSignUp"/>
+                    <include name="testGoogleOAuthButton"/>
+                    
+                    <!-- Input validation tests -->
+                    <include name="testInvalidEmailFormat"/>
+                    <include name="testWeakPassword"/>
+                    <include name="testDuplicateEmail"/>
+                    <include name="testMissingEmail"/>
+                    <include name="testMissingPassword"/>
+                    
+                    <!-- UI behavior tests -->
+                    <include name="testMarketingCheckboxBehavior"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+    
+    <!-- Advanced Sign-up Tests - Can run in parallel -->
+    <test name="Advanced Sign-up Tests" parallel="none">
+        <classes>
+            <class name="com.ninox.tests.AdvancedSignUpTests">
+                <methods>
+                    <include name="testEmailDomainVariations"/>
+                    <include name="testPasswordComplexityScenarios"/>
+                    <include name="testSpecialCharacterHandling"/>
+                    <include name="testEdgeCaseInputs"/>
+                    <include name="testFormSubmissionTiming"/>
+                    <include name="testKeyboardNavigation"/>
+                    <include name="testRapidSubmissionProtection"/>
+                    <include name="testBrowserNavigationBehavior"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+</suite>
