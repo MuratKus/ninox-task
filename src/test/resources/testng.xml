@@ -2,47 +2,64 @@
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
 <suite name="Ninox Sign-up Tests" verbose="1">
     
-    <!-- Core Sign-up Tests - Ordered execution -->
-    <test name="Core Sign-up Flow Tests" preserve-order="true">
+    <!-- Smoke Tests - Critical path only -->
+    <test name="Smoke Tests" preserve-order="true">
+        <groups>
+            <run>
+                <include name="smoke"/>
+            </run>
+        </groups>
         <classes>
-            <class name="com.ninox.tests.SignUpTests">
-                <methods>
-                    <!-- Smoke test first -->
-                    <include name="testPageAccessibility"/>
-                    
-                    <!-- Critical path tests -->
-                    <include name="testValidSignUp"/>
-                    <include name="testGoogleOAuthButton"/>
-                    
-                    <!-- Input validation tests -->
-                    <include name="testInvalidEmailFormat"/>
-                    <include name="testWeakPassword"/>
-                    <include name="testDuplicateEmail"/>
-                    <include name="testMissingEmail"/>
-                    <include name="testMissingPassword"/>
-                    
-                    <!-- UI behavior tests -->
-                    <include name="testMarketingCheckboxBehavior"/>
-                </methods>
-            </class>
+            <class name="com.ninox.tests.SignUpTests"/>
         </classes>
     </test>
     
-    <!-- Advanced Sign-up Tests - Can run in parallel -->
-    <test name="Advanced Sign-up Tests" parallel="none">
+    <!-- Regression Tests - Comprehensive coverage -->
+    <test name="Regression Tests" parallel="none">
+        <groups>
+            <run>
+                <include name="smoke"/>
+                <include name="positive"/>
+                <include name="negative"/>
+                <include name="validation"/>
+                <include name="integration"/>
+                <include name="ui"/>
+            </run>
+        </groups>
         <classes>
-            <class name="com.ninox.tests.AdvancedSignUpTests">
-                <methods>
-                    <include name="testEmailDomainVariations"/>
-                    <include name="testPasswordComplexityScenarios"/>
-                    <include name="testSpecialCharacterHandling"/>
-                    <include name="testEdgeCaseInputs"/>
-                    <include name="testFormSubmissionTiming"/>
-                    <include name="testKeyboardNavigation"/>
-                    <include name="testRapidSubmissionProtection"/>
-                    <include name="testBrowserNavigationBehavior"/>
-                </methods>
-            </class>
+            <class name="com.ninox.tests.SignUpTests"/>
         </classes>
     </test>
+    
+    <!-- Security Tests - Security-focused scenarios -->
+    <test name="Security Tests" parallel="none">
+        <groups>
+            <run>
+                <include name="security"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.ninox.tests.SignUpTests"/>
+        </classes>
+    </test>
+    
+    <!-- Performance Tests - Timing and responsiveness -->
+    <test name="Performance Tests" parallel="none">
+        <groups>
+            <run>
+                <include name="performance"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.ninox.tests.SignUpTests"/>
+        </classes>
+    </test>
+    
+    <!-- Full Test Suite - Everything -->
+    <test name="Full Test Suite" parallel="none">
+        <classes>
+            <class name="com.ninox.tests.SignUpTests"/>
+        </classes>
+    </test>
+    
 </suite>

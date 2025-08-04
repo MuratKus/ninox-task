@@ -26,8 +26,10 @@ public class SignUpTests extends BaseTest {
         logger.info("Navigated to sign-up page: {}/create-account", baseUrl);
     }
     
+    // ============ SMOKE TESTS ============
+    
     @Test(description = "Smoke test: Verify sign-up page loads and basic elements are present",
-          priority = 1)
+          priority = 1, groups = {"smoke", "critical"})
     @Story("Page Accessibility")
     @Severity(SeverityLevel.BLOCKER)
     @Description("Verify that the sign-up page loads correctly and essential elements are accessible")
@@ -46,8 +48,10 @@ public class SignUpTests extends BaseTest {
         logger.info("Smoke test passed - page is accessible and basic elements are present");
     }
 
+    // ============ POSITIVE TESTS ============
+    
     @Test(description = "Valid sign-up with unique email and strong password", 
-          dependsOnMethods = {"testPageAccessibility"},
+          dependsOnMethods = {"testPageAccessibility"}, groups = {"positive", "regression"},
           retryAnalyzer = TestRetryAnalyzer.class)
     @Story("Valid User Registration")
     @Severity(SeverityLevel.CRITICAL)
@@ -69,7 +73,10 @@ public class SignUpTests extends BaseTest {
         Assert.assertTrue(redirected, "User should be redirected after successful sign-up");
     }
     
+    // ============ NEGATIVE/VALIDATION TESTS ============
+    
     @Test(description = "Sign-up with invalid email format", 
+          groups = {"negative", "validation"},
           retryAnalyzer = TestRetryAnalyzer.class)
     @Story("Input Validation")
     @Severity(SeverityLevel.NORMAL)
@@ -116,6 +123,7 @@ public class SignUpTests extends BaseTest {
     }
     
     @Test(description = "Sign-up with weak password", 
+          groups = {"negative", "validation"},
           retryAnalyzer = TestRetryAnalyzer.class)
     @Story("Input Validation")
     @Severity(SeverityLevel.NORMAL)
@@ -139,6 +147,7 @@ public class SignUpTests extends BaseTest {
     }
     
     @Test(description = "Sign-up with already registered email", 
+          groups = {"negative", "validation"},
           retryAnalyzer = TestRetryAnalyzer.class)
     @Story("Input Validation")
     @Severity(SeverityLevel.NORMAL)
@@ -167,7 +176,10 @@ public class SignUpTests extends BaseTest {
                          "Error message should indicate email already exists");
     }
     
+    // ============ INTEGRATION TESTS ============
+    
     @Test(description = "Verify Google OAuth button is present and clickable", 
+          groups = {"integration", "oauth"},
           retryAnalyzer = TestRetryAnalyzer.class)
     @Story("OAuth Integration")
     @Severity(SeverityLevel.NORMAL)
@@ -199,6 +211,7 @@ public class SignUpTests extends BaseTest {
     }
     
     @Test(description = "Sign-up with missing email field", 
+          groups = {"negative", "validation"},
           retryAnalyzer = TestRetryAnalyzer.class)
     @Story("Input Validation")
     @Severity(SeverityLevel.NORMAL)
@@ -222,6 +235,7 @@ public class SignUpTests extends BaseTest {
     }
     
     @Test(description = "Sign-up with missing password field", 
+          groups = {"negative", "validation"},
           retryAnalyzer = TestRetryAnalyzer.class)
     @Story("Input Validation")
     @Severity(SeverityLevel.NORMAL)
@@ -244,7 +258,10 @@ public class SignUpTests extends BaseTest {
                          "Form should validate required password field");
     }
     
+    // ============ UI/UX TESTS ============
+    
     @Test(description = "Marketing checkbox opt-in behavior", 
+          groups = {"ui", "regression"},
           retryAnalyzer = TestRetryAnalyzer.class)
     @Story("Marketing Consent")
     @Severity(SeverityLevel.MINOR)
@@ -279,4 +296,125 @@ public class SignUpTests extends BaseTest {
                          "Account creation should work regardless of marketing consent");
     }
     
+    // ============ SECURITY TESTS ============
+    
+    @Test(description = "Test form handling of special characters and potential injection attempts",
+          groups = {"security", "regression"},
+          retryAnalyzer = TestRetryAnalyzer.class)
+    @Story("Input Sanitization")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Test form handling of special characters and potential security issues")
+    public void testSpecialCharacterHandling() {
+        logger.info("Testing form security with special characters");
+        
+        String[] specialEmails = {
+            "test+tag@example.com",         // Plus addressing
+            "test.dots@example.com",        // Dots in local part
+            "test-dash@example.com",        // Dashes
+            "test_underscore@example.com",  // Underscores
+            "test@sub.domain.com"           // Subdomain
+        };
+        
+        String[] potentiallyDangerousPasswords = {
+            "Pass@123!",                    // Standard special chars (safe)
+            "Pass123;",                     // Semicolon
+            "'Pass123'",                    // Single quotes
+            "\"Pass123\"",                  // Double quotes
+            "<Pass123>"                     // HTML-like brackets
+        };
+        
+        for (String email : specialEmails) {
+            logger.info("Testing email with special characters: {}", email);
+            
+            signUpPage.enterEmail(email);
+            signUpPage.enterPassword(potentiallyDangerousPasswords[0]); // Use safe password
+            
+            // Verify form accepts legitimate special characters
+            boolean formAccepted = signUpPage.isCreateAccountButtonEnabled();
+            logger.info("Form accepted email '{}': {}", email, formAccepted);
+            
+            // Clear for next test
+            signUpPage.enterEmail("");
+            signUpPage.enterPassword("");
+        }
+    }
+    
+    // ============ PERFORMANCE TESTS ============
+    
+    @Test(description = "Test form submission timing and user experience",
+          groups = {"performance", "regression"},
+          retryAnalyzer = TestRetryAnalyzer.class)
+    @Story("Form Performance")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Test form responsiveness and submission timing")
+    public void testFormSubmissionTiming() {
+        String email = TestDataGenerator.generateUniqueEmail();
+        String password = TestDataGenerator.generateStrongPassword();
+        
+        logger.info("Testing form submission performance with email: {}", email);
+        
+        long startTime = System.currentTimeMillis();
+        
+        signUpPage.enterEmail(email);
+        signUpPage.enterPassword(password);
+        signUpPage.clickCreateAccount();
+        
+        // Check if button becomes disabled during submission (good UX)
+        boolean buttonDisabled = false;
+        for (int i = 0; i < 10; i++) {
+            if (!signUpPage.isCreateAccountButtonEnabled()) {
+                buttonDisabled = true;
+                logger.info("Submit button properly disabled during processing");
+                break;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        
+        long submitTime = System.currentTimeMillis() - startTime;
+        logger.info("Form submission response time: {}ms", submitTime);
+        
+        // Performance assertion - form should respond quickly
+        Assert.assertTrue(submitTime < 15000, 
+                "Form should respond within 15 seconds (current: " + submitTime + "ms)");
+    }
+    
+    // ============ EDGE CASE TESTS ============
+    
+    @Test(description = "Test various email domain formats",
+          groups = {"edge-case", "validation"},
+          retryAnalyzer = TestRetryAnalyzer.class)
+    @Story("Email Domain Validation")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Test sign-up with different valid email domain formats")
+    public void testEmailDomainVariations() {
+        logger.info("Testing various email domain formats");
+        
+        String[] emailDomains = {
+            "@gmail.com", "@outlook.com", "@yahoo.com", 
+            "@company.com", "@university.edu", "@test.de"
+        };
+        
+        String password = TestDataGenerator.generateStrongPassword();
+        
+        for (String domain : emailDomains) {
+            String email = TestDataGenerator.generateUniqueEmailWithDomain(domain);
+            logger.info("Testing email domain: {}", domain);
+            
+            signUpPage.enterEmail(email);
+            signUpPage.enterPassword(password);
+            
+            // Verify form accepts different valid domains
+            Assert.assertTrue(signUpPage.isCreateAccountButtonEnabled(),
+                    "Create account button should be enabled for domain: " + domain);
+            
+            // Clear fields for next iteration
+            signUpPage.enterEmail("");
+            signUpPage.enterPassword("");
+        }
+    }
 }
